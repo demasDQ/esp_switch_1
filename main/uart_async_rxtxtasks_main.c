@@ -19,6 +19,8 @@
 #define GPIO_RESET CONFIG_RESET_GPIO
 #define GPIO_BL CONFIG_BL_GPIO
 
+#define TXD_PIN (GPIO_NUM_4)
+#define RXD_PIN (GPIO_NUM_5)
 
 TFT_t dev;
 
@@ -28,17 +30,66 @@ static const char *TAG = "MAIN";
 
 #include "freertos/task.h"
 #include "esp_system.h"
-#include "esp_log.h"
 #include "driver/uart.h"
 #include "string.h"
 #include "driver/gpio.h"
 
+#include "esp_wifi.h"
+#include "esp_eap_client.h"
+#include "esp_event.h"
+#include "nvs_flash.h"
+#include "esp_netif.h"
+
 static const int RX_BUF_SIZE = 1024;
 
+void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
+    if (event_base == WIFI_EVENT) {
+        switch (event_id) {
+            case WIFI_EVENT_STA_START: 
+                esp_wifi_connect();
+                printf("aaa\n");
+                break;
+
+            case WIFI_EVENT_STA_CONNECTED:
+                ESP_LOGI("TEST_ESP32", "WIFI CONNECT");
+                break;
+
+            default: 
+                break;
+        }
+    }
+    
+    if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+        ESP_LOGI("TEST_ESP32", "Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
+    }
+}
+
+void wifi_init()
+{
+    nvs_flash_init();
+    esp_netif_init();
+    esp_event_loop_create_default();
+    esp_netif_create_default_wifi_sta();
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    esp_wifi_init(&cfg);
+    esp_event_handler_register(WIFI_EVENT,ESP_EVENT_ANY_ID,&wifi_event_handler,NULL);
+    esp_event_handler_register(IP_EVENT,IP_EVENT_STA_GOT_IP,&wifi_event_handler,NULL);
+    wifi_config_t wifi_config = {
+        .sta={
+        .ssid = "Redmik50",
+        .password = "12345678",
+    }
+    };
+    esp_wifi_set_config(WIFI_IF_STA,&wifi_config);
+    esp_wifi_set_mode(WIFI_MODE_STA);
+    esp_wifi_start();
+}
 
 
-#define TXD_PIN (GPIO_NUM_4)
-#define RXD_PIN (GPIO_NUM_5)
+
+
+
 
 bool init_spiffs(void)
 {
@@ -106,6 +157,7 @@ void init(void) {
     uart_set_pin(UART_NUM_1, TXD_PIN, RXD_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
     
     init_lcd();
+    wifi_init();
 }
 
 // int sendData(const char* logName, const char* data)
