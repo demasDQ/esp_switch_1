@@ -11,6 +11,7 @@
 #include "fontx.h"
 #include "esp_spiffs.h"
 #include "esp_log.h"
+#include "app_lora_net.h"
 
 #define TFT_MOSI CONFIG_MOSI_GPIO
 #define TFT_SCLK CONFIG_SCLK_GPIO
@@ -19,8 +20,6 @@
 #define GPIO_RESET CONFIG_RESET_GPIO
 #define GPIO_BL CONFIG_BL_GPIO
 
-#define TXD_PIN (GPIO_NUM_4)
-#define RXD_PIN (GPIO_NUM_5)
 
 TFT_t dev;
 
@@ -33,9 +32,8 @@ static const char *TAG = "MAIN";
 #include "driver/uart.h"
 #include "string.h"
 #include "driver/gpio.h"
-
 #include "wifi_manager.h"
-static const int RX_BUF_SIZE = 1024;
+
 
 bool init_spiffs(void)
 {
@@ -72,7 +70,7 @@ bool init_spiffs(void)
     return true;
 }
 
-void init_lcd(void) {
+void lcd_init(void) {
     spi_master_init(&dev, TFT_MOSI, TFT_SCLK, TFT_CS, GPIO_DC, GPIO_RESET, GPIO_BL, -1, -1, -1, -1, -1);
     lcdInit(&dev, 0x7735, 128, 160, 2, 1); // ST7735 with 128x160 resolution and configured offsets
     lcdFillScreen(&dev, BLACK);
@@ -89,21 +87,12 @@ void init(void) {
         ESP_LOGE(TAG, "SPIFFS initialization failed, continuing without fonts");
     }
 
-    const uart_config_t uart_config = {
-        .baud_rate = 115200,
-        .data_bits = UART_DATA_8_BITS,
-        .parity = UART_PARITY_DISABLE,
-        .stop_bits = UART_STOP_BITS_1,
-        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-        .source_clk = UART_SCLK_DEFAULT,
-    };
-    // We won't use a buffer for sending data.
-    uart_driver_install(UART_NUM_1, RX_BUF_SIZE * 2, 0, 0, NULL, 0);
-    uart_param_config(UART_NUM_1, &uart_config);
-    uart_set_pin(UART_NUM_1, TXD_PIN, RXD_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+   
     
-    init_lcd();
+    lcd_init();
     wifi_init();
+
+    app_lora_net_init();
 }
 
 // int sendData(const char* logName, const char* data)
@@ -139,110 +128,7 @@ void init(void) {
 //     }
 //     free(data);
 // }
-// RGB颜色测试函数
-// static void test_basic_colors(void) {
-//     ESP_LOGI("LCD_TEST", "=== 基础颜色测试 ===");
-//     const uint16_t colors[] = {RED, GREEN, BLUE, WHITE, BLACK, YELLOW, CYAN, PURPLE, GRAY};
-//     const char* color_names[] = {"红色", "绿色", "蓝色", "白色", "黑色", "黄色", "青色", "紫色", "灰色"};
-    
-//     for (int i = 0; i < sizeof(colors) / sizeof(colors[0]); i++) {
-//         ESP_LOGI("LCD_TEST", "显示: %s", color_names[i]);
-//         lcdFillScreen(&dev, colors[i]);
-//         vTaskDelay(pdMS_TO_TICKS(1500));
-//     }
-// }
 
-// // RGB条纹测试函数
-// static void test_rgb_stripes(void) {
-//     ESP_LOGI("LCD_TEST", "=== RGB条纹测试 ===");
-    
-//     // 竖条纹测试
-//     ESP_LOGI("LCD_TEST", "竖条纹测试");
-//     for (int repeat = 0; repeat < 2; repeat++) {
-//         for (int stripe = 0; stripe < 3; stripe++) {
-//             lcdFillScreen(&dev, BLACK);
-//             uint16_t stripe_width = dev._width / 3;
-//             uint16_t x_start = stripe * stripe_width;
-//             uint16_t x_end = (stripe + 1) * stripe_width - 1;
-            
-//             lcdDrawFillRect(&dev, x_start, 0, x_end, dev._height - 1, 
-//                            (stripe == 0) ? RED : ((stripe == 1) ? GREEN : BLUE));
-//             vTaskDelay(pdMS_TO_TICKS(800));
-//         }
-//     }
-    
-//     // 横条纹测试
-//     ESP_LOGI("LCD_TEST", "横条纹测试");
-//     for (int repeat = 0; repeat < 2; repeat++) {
-//         for (int stripe = 0; stripe < 3; stripe++) {
-//             lcdFillScreen(&dev, BLACK);
-//             uint16_t stripe_height = dev._height / 3;
-//             uint16_t y_start = stripe * stripe_height;
-//             uint16_t y_end = (stripe + 1) * stripe_height - 1;
-            
-//             lcdDrawFillRect(&dev, 0, y_start, dev._width - 1, y_end,
-//                            (stripe == 0) ? RED : ((stripe == 1) ? GREEN : BLUE));
-//             vTaskDelay(pdMS_TO_TICKS(800));
-//         }
-//     }
-// }
-
-// // 渐变测试函数
-// static void test_gradient(void) {
-//     ESP_LOGI("LCD_TEST", "=== 渐变效果测试 ===");
-    
-//     // 红色渐变
-//     ESP_LOGI("LCD_TEST", "红色渐变");
-//     for (int intensity = 0; intensity <= 255; intensity += 8) {
-//         uint16_t color = rgb565(intensity, 0, 0);
-//         lcdFillScreen(&dev, color);
-//         vTaskDelay(pdMS_TO_TICKS(30));
-//     }
-    
-//     // 绿色渐变
-//     ESP_LOGI("LCD_TEST", "绿色渐变");
-//     for (int intensity = 0; intensity <= 255; intensity += 8) {
-//         uint16_t color = rgb565(0, intensity, 0);
-//         lcdFillScreen(&dev, color);
-//         vTaskDelay(pdMS_TO_TICKS(30));
-//     }
-    
-//     // 蓝色渐变
-//     ESP_LOGI("LCD_TEST", "蓝色渐变");
-//     for (int intensity = 0; intensity <= 255; intensity += 8) {
-//         uint16_t color = rgb565(0, 0, intensity);
-//         lcdFillScreen(&dev, color);
-//         vTaskDelay(pdMS_TO_TICKS(30));
-//     }
-    
-//     // 白色渐变
-//     ESP_LOGI("LCD_TEST", "白色渐变");
-//     for (int intensity = 0; intensity <= 255; intensity += 8) {
-//         uint16_t color = rgb565(intensity, intensity, intensity);
-//         lcdFillScreen(&dev, color);
-//         vTaskDelay(pdMS_TO_TICKS(30));
-//     }
-// }
-
-// // 反色测试函数
-// static void test_inverse_colors(void) {
-//     ESP_LOGI("LCD_TEST", "=== 反色对比测试 ===");
-    
-//     const uint16_t pairs[][2] = {
-//         {BLACK, WHITE},
-//         {RED, CYAN},
-//         {GREEN, PURPLE},
-//         {BLUE, YELLOW}
-//     };
-    
-//     for (int i = 0; i < sizeof(pairs) / sizeof(pairs[0]); i++) {
-//         // 左半屏
-//         lcdDrawFillRect(&dev, 0, 0, dev._width / 2 - 1, dev._height - 1, pairs[i][0]);
-//         // 右半屏
-//         lcdDrawFillRect(&dev, dev._width / 2, 0, dev._width - 1, dev._height - 1, pairs[i][1]);
-//         vTaskDelay(pdMS_TO_TICKS(2000));
-//     }
-// }
 void display_text_demo(TFT_t *dev, FontxFile *fx) {
     uint16_t color;
     uint8_t ascii[32];
@@ -281,19 +167,7 @@ static void rgb_test_task(void *arg) {
     ESP_LOGI("LCD_TEST", "RGB测试任务启动");
     
     while (1) {
-        // // 模式1: 基础颜色测试
-        // test_basic_colors();
-        
-        // // 模式2: RGB条纹测试
-        // test_rgb_stripes();
-        
-        // // 模式3: 渐变效果测试
-        // test_gradient();
-        
-        // // 模式4: 反色对比测试
-        // test_inverse_colors();
-        
-        // ESP_LOGI("LCD_TEST", "=== 完成一轮测试，开始下一轮 ===");
+
         display_text_demo(&dev, fx16G);
         vTaskDelay(pdMS_TO_TICKS(2000));
     }
