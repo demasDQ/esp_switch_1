@@ -11,7 +11,7 @@ static uint8_t calculate_checksum(const uint8_t *data, uint8_t len) {
 // 发送协议帧到某个从节点的函数
 static int send_protocol_frame(uint8_t slave_id, command_type_t command, const uint8_t *data, uint8_t data_len)
 {
-    uint8_t frame[256];
+    uint8_t frame[MAX_FRAME_SIZE];
     uint8_t frame_index = 0;
     
     // Build frame
@@ -84,7 +84,7 @@ static bool parse_frame_byte(uint8_t byte) {
             }
             // fall through to error
         default:
-            // 错误：回到 IDLE，但不清空 buffer（由调用者决定）
+            memset(&g_frame_parser, 0, sizeof(g_frame_parser));
             g_frame_parser.state = FRAME_STATE_IDLE;
             break;
     }
@@ -220,10 +220,7 @@ static void master_task(void *arg) {
             send_protocol_frame(current_slave, CMD_QUERY, 
                                NULL, 0);
             
-            // 清除之前的事件标志
-            xEventGroupClearBits(g_response_event, RESPONSE_SLAVE_1_BIT | RESPONSE_SLAVE_2_BIT);
-            
-            // 等待响应事件，而不是直接读取队列
+            // 等待响应事件（使用自动清除功能，避免竞态条件）
             EventBits_t expected_bits = 0;
             if (current_slave == SLAVE_1_ID) {
                 expected_bits = RESPONSE_SLAVE_1_BIT;
@@ -234,7 +231,7 @@ static void master_task(void *arg) {
             EventBits_t received_bits = xEventGroupWaitBits(
                 g_response_event,
                 expected_bits,
-                pdTRUE,  // 清除等待的位
+                pdTRUE,  // 自动清除等待的位
                 pdTRUE,  // 等待所有位
                 pdMS_TO_TICKS(2000)
             );
@@ -271,7 +268,7 @@ void app_lora_net_init(void) {
     }
     
     // 创建任务
-    xTaskCreate(rx_task, "uart_rx_task", 4096, NULL, configMAX_PRIORITIES, NULL);           // 最高
-    xTaskCreate(master_task, "master_task", 4096, NULL, configMAX_PRIORITIES - 1, NULL);   // 中
-    xTaskCreate(sensor_data_task, "sensor_data_task", 4096, NULL, configMAX_PRIORITIES - 2, NULL); // 低
+        xTaskCreate(rx_task, "uart_rx_task", 4096, NULL, configMAX_PRIORITIES - 1, NULL);
+        xTaskCreate(master_task, "master_task", 4096, NULL, configMAX_PRIORITIES - 2, NULL);
+        xTaskCreate(sensor_data_task, "sensor_data_task", 4096, NULL, configMAX_PRIORITIES - 3, NULL);
 }
