@@ -113,15 +113,11 @@ static void process_received_frame(const uint8_t *buffer, uint16_t length) {
     }
     
 
-    // 发送到主通信队列
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    if (xQueueSendFromISR(g_frame_queue, &msg, &xHigherPriorityTaskWoken) == pdTRUE) {
-        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-    }
+    // 发送到主通信队列（在任务上下文中）
+    xQueueSend(g_frame_queue, &msg, 0);
     
-    // 如果是查询响应，设置相应的事件标志
+    // 如果是查询响应，设置相应的事件标志（在任务上下文中）
     if (msg.command == CMD_QUERY_RESPONSE_DATA) {
-        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
         EventBits_t bits = 0;
         
         if (msg.slave_id == SLAVE_1_ID) {
@@ -131,8 +127,7 @@ static void process_received_frame(const uint8_t *buffer, uint16_t length) {
         }
         
         if (bits != 0) {
-            xEventGroupSetBitsFromISR(g_response_event, bits, &xHigherPriorityTaskWoken);
-            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+            xEventGroupSetBits(g_response_event, bits);
         }
     }
 
@@ -261,6 +256,7 @@ static void master_task(void *arg) {
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 }
+// 初始化函数，创建队列和任务
 
 void app_lora_net_init(void) {
    
