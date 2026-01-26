@@ -12,6 +12,7 @@
 #include "esp_spiffs.h"
 #include "esp_log.h"
 #include "app_lora_net.h"
+#include "app_wifi_ONENET.h"
 
 #define TFT_MOSI CONFIG_MOSI_GPIO
 #define TFT_SCLK CONFIG_SCLK_GPIO
@@ -33,7 +34,7 @@ static const char *TAG = "MAIN";
 #include "string.h"
 #include "driver/gpio.h"
 #include "wifi_manager.h"
-
+#include "lora_manager.h"
 
 bool init_spiffs(void)
 {
@@ -87,47 +88,15 @@ void init(void) {
         ESP_LOGE(TAG, "SPIFFS initialization failed, continuing without fonts");
     }
 
-   
+    lora_init();
     
     lcd_init();
     wifi_init();
 
     app_lora_net_init();
+    app_wifi_ONENET_init();
 }
 
-// int sendData(const char* logName, const char* data)
-// {
-//     const int len = strlen(data);
-//     const int txBytes = uart_write_bytes(UART_NUM_1, data, len);
-//     ESP_LOGI(logName, "Wrote %d bytes", txBytes);
-//     return txBytes;
-// }
-
-// static void tx_task(void *arg)
-// {
-//     static const char *TX_TASK_TAG = "TX_TASK";
-//     esp_log_level_set(TX_TASK_TAG, ESP_LOG_INFO);
-//     while (1) {
-//         sendData(TX_TASK_TAG, "Hello world");
-//         vTaskDelay(2000 / portTICK_PERIOD_MS);
-//     }
-// }
-
-// static void rx_task(void *arg)
-// {
-//     static const char *RX_TASK_TAG = "RX_TASK";
-//     esp_log_level_set(RX_TASK_TAG, ESP_LOG_INFO);
-//     uint8_t* data = (uint8_t*) malloc(RX_BUF_SIZE+1);
-//     while (1) {
-//         const int rxBytes = uart_read_bytes(UART_NUM_1, data, RX_BUF_SIZE, 1000 / portTICK_PERIOD_MS);
-//         if (rxBytes > 0) {
-//             data[rxBytes] = 0;
-//             ESP_LOGI(RX_TASK_TAG, "Read %d bytes: '%s'", rxBytes, data);
-//             ESP_LOG_BUFFER_HEXDUMP(RX_TASK_TAG, data, rxBytes, ESP_LOG_INFO);
-//         }
-//     }
-//     free(data);
-// }
 
 void display_text_demo(TFT_t *dev, FontxFile *fx) {
     uint16_t color;
@@ -178,9 +147,7 @@ void app_main(void)
 
     
     init();
-    // xTaskCreate(rx_task, "uart_rx_task", 1024*2, NULL, configMAX_PRIORITIES, NULL);
-    // xTaskCreate(tx_task, "uart_tx_task", 1024*2, NULL, configMAX_PRIORITIES-1, NULL);
-    xTaskCreate(rgb_test_task, "rgb_test_task", 1024*2, NULL, configMAX_PRIORITIES-2, NULL);
+    xTaskCreate(rgb_test_task, "rgb_test_task", 1024*2, NULL, configMAX_PRIORITIES-4, NULL);
     
 
 }

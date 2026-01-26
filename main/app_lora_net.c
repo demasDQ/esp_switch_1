@@ -81,7 +81,7 @@ static bool parse_frame_byte(uint8_t byte) {
                 if (calc_csum == g_frame_parser.buffer[g_frame_parser.length - 2]) {
                     return true; // 不清空，由调用者处理
                 }
-            }
+            }break;
             // fall through to error
         default:
             memset(&g_frame_parser, 0, sizeof(g_frame_parser));
@@ -135,29 +135,33 @@ static void process_received_frame(const uint8_t *buffer, uint16_t length) {
 // UART接收任务
 static void rx_task(void *arg) {
     static const char *RX_TASK_TAG = "RX_TASK";
-    uint8_t rx_byte;
+    uint8_t rx_buffer[128]; // 128字节缓冲区
+    int len;
     
     while (1) {
-        int len = uart_read_bytes(UART_NUM_2, &rx_byte, 1, 
-                                 pdMS_TO_TICKS(10));
+        // 一次读取多个字节(最多128字节)，20ms超时。uart_read_bytes()函数内部实现环形缓冲区，数据不会丢失。
+        len = uart_read_bytes(UART_NUM_2, rx_buffer, sizeof(rx_buffer),
+                            pdMS_TO_TICKS(20));
         
         if (len > 0) {
-            if (parse_frame_byte(rx_byte)) {
-                uint16_t saved_length = g_frame_parser.length;
-                uint8_t saved_buffer[sizeof(g_frame_parser.buffer)];
-                memcpy(saved_buffer, g_frame_parser.buffer, saved_length);
+            for (int i = 0; i < len; i++) {
+                if (parse_frame_byte(rx_buffer[i])) {
+                    uint16_t saved_length = g_frame_parser.length;
+                    uint8_t saved_buffer[sizeof(g_frame_parser.buffer)];
+                    memcpy(saved_buffer, g_frame_parser.buffer, saved_length);
 
-                process_received_frame(saved_buffer, saved_length);
+                    process_received_frame(saved_buffer, saved_length);
+                    memset(&g_frame_parser, 0, sizeof(g_frame_parser));
 
-                memset(&g_frame_parser, 0, sizeof(g_frame_parser));
-
-                // 现在用 saved_* 打印日志
-                ESP_LOGD(RX_TASK_TAG, "Received frame: %d bytes", saved_length);
-                if (esp_log_level_get(RX_TASK_TAG) >= ESP_LOG_DEBUG) {
-                    ESP_LOG_BUFFER_HEXDUMP(RX_TASK_TAG, saved_buffer, saved_length, ESP_LOG_DEBUG);
+                    ESP_LOGD(RX_TASK_TAG, "Received frame: %d bytes", saved_length);
+                    if (esp_log_level_get(RX_TASK_TAG) >= ESP_LOG_DEBUG) {
+                        ESP_LOG_BUFFER_HEXDUMP(RX_TASK_TAG, saved_buffer, 
+                                            saved_length, ESP_LOG_DEBUG);
+                    }
                 }
-}
+            }
         }
+        vTaskDelay(5 / portTICK_PERIOD_MS); // 减少延迟时间
     }
 }
 // 解析从机数据任务（处理所有帧）
@@ -199,6 +203,7 @@ static void sensor_data_task(void *arg) {
                     break;
             }
         }
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 // 主任务，发送查询命令并通过事件组等待响应
@@ -211,7 +216,7 @@ static void master_task(void *arg) {
     const uint8_t max_retries = 3;
     
     while (1) {
-        bool response_received = false;
+        
         
         for (uint8_t retry = 0; retry < max_retries; retry++) {
             ESP_LOGI(TAG, "Querying slave %d (retry %d)", 
@@ -238,10 +243,9 @@ static void master_task(void *arg) {
             
             if ((received_bits & expected_bits) == expected_bits) {
                 ESP_LOGI(TAG, "Received response from slave %d", current_slave);
-                response_received = true;
                 break; // 收到响应，退出重试循环
             }
-            
+        
             if (retry == max_retries - 1) {
                 ESP_LOGW(TAG, "No response from slave %d after %d retries", 
                          current_slave, max_retries);

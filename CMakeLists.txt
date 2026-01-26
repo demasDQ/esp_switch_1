@@ -9,5 +9,5 @@ project(esp_switch_1)
 spiffs_create_partition_image(storage 
     font 
     FLASH_IN_PROJECT
-    PARTITION_OFFSET 0xF0000  # 与partitions.csv中的偏移地址一致
+    PARTITION_OFFSET 0x3E7000  # 与partitions.csv中的偏移地址一致
 )

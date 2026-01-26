@@ -102,37 +102,15 @@ esp_err_t uart_send_at_command(const char* at_command)
     return uart_send_data(at_command, strlen(at_command));
 }
 
-static void  uart_rx_task(void *arg){
-  
-        static const char *RX_TASK_TAG = "RX_TASK";
-        esp_log_level_set(RX_TASK_TAG, ESP_LOG_INFO);
-        uint8_t* data = (uint8_t*) malloc(RX_BUF_SIZE+1);
-        while (1) {
-            const int rxBytes = uart_read_bytes(UART_NUM_2, data, RX_BUF_SIZE, 1000 / portTICK_PERIOD_MS);
-            if (rxBytes > 0) {
-                data[rxBytes] = 0;
-                ESP_LOGI(RX_TASK_TAG, "Read %d bytes: '%s'", rxBytes, data);
-                ESP_LOG_BUFFER_HEXDUMP(RX_TASK_TAG, data, rxBytes, ESP_LOG_INFO);
-            }
-        }
-        free(data);
-    }
 
 
 
 
-void app_lora_init(void)
+void lora_init(void)
 {
     uart_init();   // 初始化串口
     gpio_init();   // 初始化GPIO
 
-    // 创建UART接收任务
-    xTaskCreate(uart_rx_task,           // 任务函数
-                "uart_rx_task",         // 任务名称
-                2048,                   // 堆栈大小（字节）
-                NULL,                   // 参数
-                configMAX_PRIORITIES - 1, // 优先级
-                NULL);                  // 任务句柄
 
     // 切换到配置模式
     ESP_LOGI("LORA", "Switching to configuration mode");

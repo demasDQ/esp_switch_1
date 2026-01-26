@@ -3,6 +3,6 @@
 nvs,      data, nvs,     0x9000,  0x6000,
 phy_init, data, phy,     0xf000,  0x1000,
 # factory app partition
-factory,  app,  factory, 0x10000, 0xE0000,
-# SPIFFS partition for font files
-storage,  data, spiffs,  0xF0000, 0x100000, 
+factory,  app,  factory, 0x10000, 0x3D7000,
+# SPIFFS partition for font files (100KB)
+storage,  data, spiffs,  0x3E7000, 0x19000,

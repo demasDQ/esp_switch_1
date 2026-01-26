@@ -16,7 +16,7 @@
 
 
 
-
+void lora_init(void);
 
 // UART发送函数声明
 esp_err_t uart_send_data(const char* data, size_t length);
