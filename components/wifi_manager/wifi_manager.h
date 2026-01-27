@@ -30,3 +30,4 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base,
 #endif
 
 #endif /* _WIFI_MANAGER_H_ */
+

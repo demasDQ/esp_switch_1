@@ -11,6 +11,16 @@
 
 static const char *TAG = "MQTT_EXAMPLE";
 
+static const char test_data[] = "{"
+    "\"id\": \"123\","
+    "\"version\": \"1.0\","
+    "\"params\": {"
+        "\"EnvironmentHumidity\": {"
+            "\"value\": 19.9"
+        "}"
+    "}"
+"}";
+
 
 static void log_error_if_nonzero(const char *message, int error_code)
 {
@@ -38,18 +48,19 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     switch ((esp_mqtt_event_id_t)event_id) {
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
-        msg_id = esp_mqtt_client_publish(client, "$sys/GkQ8q42xq6/device1/thing/property/post", "data_3", 0, 1, 0);
+        msg_id = esp_mqtt_client_publish(client, "$sys/GkQ8q42xq6/device1/thing/property/post", test_data, 0, 1, 0);
         ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
 
-        msg_id = esp_mqtt_client_subscribe(client, "$sys/GkQ8q42xq6/device1/thing/property/post/reply", 0);
-        ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
+        // msg_id = esp_mqtt_client_subscribe(client, "$sys/GkQ8q42xq6/device1/thing/property/post/reply", 0);
+        // ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
 
-        msg_id = esp_mqtt_client_subscribe(client, "$sys/GkQ8q42xq6/device1/thing/property/set", 1);
-        ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
+        // msg_id = esp_mqtt_client_subscribe(client, "$sys/GkQ8q42xq6/device1/thing/property/set", 1);
+        // ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
 
         break;
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
+  
         break;
 
     case MQTT_EVENT_SUBSCRIBED:
@@ -118,6 +129,11 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             log_error_if_nonzero("captured as transport's socket errno",  event->error_handle->esp_transport_sock_errno);
             ESP_LOGI(TAG, "Last errno string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
 
+            // 检查WiFi连接状态
+            if (event->error_handle->esp_transport_sock_errno == 128) { // ENOTCONN
+                ESP_LOGE(TAG, "Network connection lost, will auto-reconnect...");
+                // MQTT客户端会自动重连，无需手动操作
+            }
         }
         break;
     default:
@@ -129,11 +145,12 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 static void mqtt_app_start(void)
 {
     esp_mqtt_client_config_t mqtt_cfg = {
-          .broker = {
+        .broker = {
             .address = {
-                .uri = "mqtt://mqtts.heclouds.com:1883",  // OneNET 的公开 MQTT 接入点
-            }
+                .uri = "mqtt://mqtts.heclouds.com:1883",  // OneNET 的公开 MQTT 接入点(非SSL)
+            },
         },
+
         
         // 2. 配置身份凭证
         .credentials = {
