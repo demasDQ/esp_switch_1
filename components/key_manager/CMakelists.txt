@@ -1,0 +1,4 @@
+idf_component_register(SRCS "key_manager.c" 
+                    INCLUDE_DIRS "."
+                    REQUIRES driver esp_common
+                    PRIV_REQUIRES freertos)

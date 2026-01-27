@@ -13,6 +13,8 @@
 #include "esp_log.h"
 #include "app_lora_net.h"
 #include "app_wifi_ONENET.h"
+#include "key_manger.h"
+#include "app_key_menu.h"
 
 #define TFT_MOSI CONFIG_MOSI_GPIO
 #define TFT_SCLK CONFIG_SCLK_GPIO
@@ -131,23 +133,33 @@ void display_text_demo(TFT_t *dev, FontxFile *fx) {
     lcdDrawString(dev, fx, 0, 100, ascii, WHITE);
     lcdUnsetFontUnderLine(dev);
 }
-// 色彩模式循环测试
-static void rgb_test_task(void *arg) {
-    ESP_LOGI("LCD_TEST", "RGB测试任务启动");
+// // 色彩模式循环测试
+// static void rgb_test_task(void *arg) {
+//     ESP_LOGI("LCD_TEST", "RGB测试任务启动");
     
-    while (1) {
+//     while (1) {
 
-        display_text_demo(&dev, fx16G);
-        vTaskDelay(pdMS_TO_TICKS(2000));
-    }
-}
-
+//         display_text_demo(&dev, fx16G);
+//         vTaskDelay(pdMS_TO_TICKS(2000));
+//     }
+// }
 void app_main(void)
 {
 
     
     init();
-    xTaskCreate(rgb_test_task, "rgb_test_task", 1024*2, NULL, configMAX_PRIORITIES-4, NULL);
+    
+    // 初始化按键管理器
+    key_manager_init();
+    
+    // 初始化按键菜单系统
+    app_key_menu_init(&dev, fx16G);
+    
+    // 启动菜单系统
+    app_key_menu_run();
+    
+    // 保留原有的测试任务（可选）
+    // xTaskCreate(rgb_test_task, "rgb_test_task", 1024*2, NULL, configMAX_PRIORITIES-4, NULL);
     
 
 }
