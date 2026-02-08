@@ -1,19 +1,4 @@
 {
-  "C_Cpp.intelliSenseEngine": "default",
-  "idf.openOcdConfigs": [
-    "interface/ftdi/esp32_devkitj_v1.cfg",
-    "target/esp32.cfg"
-  ],
-  "idf.portWin": "COM13",
-  "idf.currentSetup": "D:/ESP-IDF/Espressif/frameworks/esp-idf-v5.1.2/",
-  "idf.customExtraVars": {
-    "IDF_TARGET": "esp32"
-  },
-  "clangd.path": "D:\\ESP-IDF\\Espressif\\tools\\esp-clang\\15.0.0-23786128ae\\esp-clang\\bin\\clangd.exe",
-  "clangd.arguments": [
-    "--background-index",
-    "--query-driver=D:\\ESP-IDF\\Espressif\\tools\\xtensa-esp32-elf\\esp-12.2.0_20230208\\xtensa-esp32-elf\\bin\\xtensa-esp32-elf-gcc.exe",
-    "--compile-commands-dir=c:\\Users\\25918\\esp_switch\\build"
-  ],
-  "idf.flashType": "UART"
+    "idf.currentSetup": "D:/Espressif/frameworks/esp-idf-v5.3.1/",
+    "idf.flashType": "UART"
 }
